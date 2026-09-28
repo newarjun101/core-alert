@@ -27,6 +27,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -44,6 +46,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.arjun.core_alert.feature.R
+import com.arjun.core_alert.feature.home.HomeAction
 import com.arjun.core_alert.feature.home.HomeScreen
 import com.arjun.core_alert.feature.home.HomeViewModel
 import com.arjun.core_alert.feature.privacy.PrivacyScreen
@@ -60,6 +63,8 @@ fun CoreAlertRoot() {
     val home: HomeViewModel = koinViewModel()
     val settings: SettingsViewModel =
         koinViewModel { parametersOf({ home.reloadContacts() }) }
+    val homeState by home.state.collectAsState()
+    val settingsState by settings.state.collectAsState()
 
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -70,6 +75,10 @@ fun CoreAlertRoot() {
     val current = AppRoute.fromRoute(backStackEntry?.destination?.route)
 
     BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
+
+    LaunchedEffect(current) {
+        if (current == AppRoute.HOME) home.handleAction(HomeAction.Refresh)
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -120,7 +129,7 @@ fun CoreAlertRoot() {
             floatingActionButton = {
                 if (current == AppRoute.HOME) {
                     FloatingActionButton(
-                        onClick = { home.openAddChoice() },
+                        onClick = { home.handleAction(HomeAction.OpenAddChoice) },
                         containerColor = colors.accent,
                         contentColor = colorResource(R.color.on_primary),
                         shape = RoundedCornerShape(18.dp)
@@ -140,8 +149,8 @@ fun CoreAlertRoot() {
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                composable(AppRoute.HOME.route) { HomeScreen(home) }
-                composable(AppRoute.SETTINGS.route) { SettingsScreen(settings) }
+                composable(AppRoute.HOME.route) { HomeScreen(homeState, home::handleAction) }
+                composable(AppRoute.SETTINGS.route) { SettingsScreen(settingsState, settings::handleAction) }
                 composable(AppRoute.PRIVACY.route) { PrivacyScreen() }
             }
         }
@@ -178,20 +187,20 @@ private fun DrawerHeader() {
         Box(
             modifier = Modifier
                 .size(52.dp)
-                .background(Color(0x24FFFFFF), RoundedCornerShape(50)),
+                .background(MaterialTheme.colorScheme.primary.copy(0.2f), RoundedCornerShape(50)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_bell),
                 contentDescription = null,
-                tint = colors.heroOn,
+                tint = MaterialTheme.colorScheme.primary, //colors.heroOn,
                 modifier = Modifier.size(26.dp)
             )
         }
         Text(
             text = stringResource(R.string.app_name),
             modifier = Modifier.padding(top = 16.dp),
-            color = colors.heroOn,
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )

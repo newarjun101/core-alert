@@ -104,7 +104,7 @@
     <string name="mute_dialog_title">Pause VIP alerts</string>
     <string name="mute_dialog_message">VIP ringtone and message sounds will be disabled for the selected duration.</string>
     <string name="mute_countdown">VIP alerts paused — resume in %1$dh %2$dm</string>
-    <string name="mute_activated">VIP alerts paused for %1$d hours</string>
+    <string name="mute_activated">%1$d hours</string>
     <string name="mute_cancelled">VIP alerts resumed</string>
     <!-- Settings -->
     <string name="settings_sound_title">Override sound</string>

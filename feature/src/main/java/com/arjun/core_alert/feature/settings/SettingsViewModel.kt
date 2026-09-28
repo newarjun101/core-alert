@@ -6,9 +6,6 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.arjun.core_alert.AlertSettingsRepository
 import com.arjun.core_alert.AppConfig
@@ -26,95 +23,143 @@ import com.arjun.core_alert.feature.R
 import com.arjun.core_alert.ThemeManager
 import com.arjun.core_alert.ThemeRepository
 import com.arjun.core_alert.VipMessageAlertsProvider
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 class SettingsViewModel(
     private val context: Application,
-    val settings: AlertSettingsRepository,
-    val theme: ThemeRepository,
+    private val settings: AlertSettingsRepository,
+    private val theme: ThemeRepository,
     private val contactRepository: ContactRepository,
     private val onContactsChanged: () -> Unit,
-    val messageAlerts: VipMessageAlertsProvider
+    private val messageAlerts: VipMessageAlertsProvider
 ) : ViewModel() {
 
-    var volumePercent by mutableStateOf(settings.volumePercent)
-    var messageVolumePercent by mutableStateOf(settings.messageVolumePercent)
-    var messageSoundEnabled by mutableStateOf(settings.messageSoundEnabled)
-    var messageSoundType by mutableStateOf(settings.messageSoundType)
-    var overrideSoundType by mutableStateOf(settings.overrideSoundType)
-    var themePalette by mutableStateOf(theme.palette)
-    var nightMode by mutableStateOf(theme.nightMode)
-    var language by mutableStateOf(LanguageManager.current(context))
-    var quietRules by mutableStateOf(settings.getQuietRules())
-    var dialog by androidx.compose.runtime.mutableStateOf<SettingsDialog?>(null)
+    private val _state = MutableStateFlow(SettingsUiState())
+    val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
     private var pendingExportPassword: String? = null
     private var pendingImportText: String? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    fun selectPalette(palette: AppPalette) {
-        if (palette == theme.palette) return
-        theme.setPalette(palette)
-        themePalette = palette
-        ThemeManager.applyPalette(palette)
-    }
-
-    fun selectNightMode(mode: NightMode) {
-        if (mode != theme.nightMode) {
-            theme.setNightMode(mode)
-            nightMode = mode
-            ThemeManager.applyNightMode(mode)
+    init {
+        setState {
+            it.copy(
+                volumePercent = settings.volumePercent,
+                messageVolumePercent = settings.messageVolumePercent,
+                messageSoundEnabled = settings.messageSoundEnabled,
+                messageSoundType = settings.messageSoundType,
+                overrideSoundType = settings.overrideSoundType,
+                themePalette = theme.palette,
+                nightMode = theme.nightMode,
+                language = LanguageManager.current(context),
+                quietRules = settings.getQuietRules(),
+                messageAlertsSupported = messageAlerts.supported,
+                callAlertMode = settings.callAlertMode,
+                repeatWindowMinutes = settings.repeatCallWindowMinutes,
+                escalateCallVolume = settings.escalateCallVolume
+            )
         }
     }
 
-    fun selectLanguage(selected: AppLanguage, activity: Activity? = null) {
-        if (selected == language) return
-        LanguageManager.apply(context, selected, activity)
-        language = LanguageManager.current(context)
+    fun handleAction(action: SettingsAction) {
+        when (action) {
+            is SettingsAction.SelectPalette -> selectPalette(action.palette)
+            is SettingsAction.SelectNightMode -> selectNightMode(action.mode)
+            is SettingsAction.SelectLanguage -> selectLanguage(action.language, action.activity)
+            is SettingsAction.SetVolume -> setVolume(action.value)
+            is SettingsAction.SetMessageVolume -> setMessageVolume(action.value)
+            is SettingsAction.SetMessageSoundEnabled -> updateMessageSoundEnabled(action.enabled)
+            is SettingsAction.SetMessageSoundType -> updateMessageSoundType(action.type)
+            is SettingsAction.SetOverrideSoundType -> updateOverrideSoundType(action.type)
+            is SettingsAction.SetCallAlertMode -> {
+                settings.setCallAlertMode(action.mode)
+                setState { it.copy(callAlertMode = action.mode) }
+            }
+            is SettingsAction.SetRepeatWindow -> {
+                settings.setRepeatCallWindowMinutes(action.minutes)
+                setState { it.copy(repeatWindowMinutes = action.minutes) }
+            }
+            is SettingsAction.SetEscalateVolume -> {
+                settings.setEscalateCallVolume(action.enabled)
+                setState { it.copy(escalateCallVolume = action.enabled) }
+            }
+            SettingsAction.OpenExportPassword -> openDialog(SettingsDialog.ExportPassword)
+            is SettingsAction.ConfirmExportPassword -> pendingExportPassword = action.password
+            is SettingsAction.ExportUri -> onExportUri(action.uri)
+            SettingsAction.OpenImportConfirm -> openDialog(SettingsDialog.ImportConfirm)
+            is SettingsAction.ImportUri -> onImportUri(action.uri)
+            is SettingsAction.DecryptPendingImport -> decryptPendingImport(action.password)
+            SettingsAction.OpenAddQuietRule -> openAddQuietRule()
+            is SettingsAction.ConfirmAddQuietRule -> addQuietRule(action.rule)
+            is SettingsAction.OpenDeleteQuietRule -> openDeleteQuietRule(action.index)
+            is SettingsAction.ConfirmDeleteQuietRule -> deleteQuietRule(action.index)
+            SettingsAction.CloseDialog -> closeDialog()
+        }
     }
 
-    fun setVolume(value: Int) {
-        volumePercent = value
+    private fun setState(transform: (SettingsUiState) -> SettingsUiState) {
+        _state.update { current -> transform(current) }
+    }
+
+    private fun openDialog(dialog: SettingsDialog) {
+        setState { it.copy(dialog = dialog) }
+    }
+
+    private fun closeDialog() {
+        setState { it.copy(dialog = null) }
+    }
+
+    private fun selectPalette(palette: AppPalette) {
+        if (palette == theme.palette) return
+        theme.setPalette(palette)
+        setState { it.copy(themePalette = palette) }
+        ThemeManager.applyPalette(palette)
+    }
+
+    private fun selectNightMode(mode: NightMode) {
+        if (mode == theme.nightMode) return
+        theme.setNightMode(mode)
+        setState { it.copy(nightMode = mode) }
+        ThemeManager.applyNightMode(mode)
+    }
+
+    private fun selectLanguage(selected: AppLanguage, activity: Activity?) {
+        if (selected == state.value.language) return
+        LanguageManager.apply(context, selected, activity)
+        setState { it.copy(language = LanguageManager.current(context)) }
+    }
+
+    private fun setVolume(value: Int) {
+        setState { it.copy(volumePercent = value) }
         settings.setVolumePercent(value)
     }
 
-    fun updateOverrideSoundType(type: Int) {
-        overrideSoundType = type
-        settings.setOverrideSoundType(type)
+    private fun setMessageVolume(value: Int) {
+        setState { it.copy(messageVolumePercent = value) }
+        settings.setMessageVolumePercent(value)
     }
 
-    fun updateMessageSoundEnabled(enabled: Boolean) {
-        messageSoundEnabled = enabled
+    private fun updateMessageSoundEnabled(enabled: Boolean) {
+        setState { it.copy(messageSoundEnabled = enabled) }
         settings.setMessageSoundEnabled(enabled)
         if (!enabled) CallMonitorService.getInstance()?.suspendMessageAlert()
     }
 
-    fun setMessageVolume(value: Int) {
-        messageVolumePercent = value
-        settings.setMessageVolumePercent(value)
-    }
-
-    fun updateMessageSoundType(type: Int) {
-        messageSoundType = type
+    private fun updateMessageSoundType(type: Int) {
+        setState { it.copy(messageSoundType = type) }
         settings.setMessageSoundType(type)
     }
 
-    fun openExportPasswordDialog() { dialog = SettingsDialog.ExportPassword }
-
-    /** Stores the export password and returns the suggested document name. */
-    fun beginExport(password: String): String {
-        pendingExportPassword = password
-        val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
-        return "corealert-backup-$timestamp.json"
+    private fun updateOverrideSoundType(type: Int) {
+        setState { it.copy(overrideSoundType = type) }
+        settings.setOverrideSoundType(type)
     }
 
-    fun openImportConfirm() { dialog = SettingsDialog.ImportConfirm }
-
-    fun onExportUri(uri: Uri) {
+    private fun onExportUri(uri: Uri) {
         val password = pendingExportPassword
         pendingExportPassword = null
         if (password.isNullOrEmpty()) return
@@ -141,7 +186,7 @@ class SettingsViewModel(
         }
     }
 
-    fun onImportUri(uri: Uri) {
+    private fun onImportUri(uri: Uri) {
         try {
             val text = context.contentResolver.openInputStream(uri)?.use { isr ->
                 isr.bufferedReader(Charsets.UTF_8).readText()
@@ -152,20 +197,20 @@ class SettingsViewModel(
                 return
             }
             pendingImportText = text
-            dialog = SettingsDialog.ImportPassword
+            openDialog(SettingsDialog.ImportPassword)
         } catch (e: Exception) {
             toast(context.getString(R.string.backup_import_failed), long = true)
         }
     }
 
-    fun decryptPendingImport(password: String) {
+    private fun decryptPendingImport(password: String) {
         val text = pendingImportText ?: return
         pendingImportText = null
         Thread {
             val plaintext = ConfigCrypto.decrypt(text, password)
             val config = plaintext?.let { ConfigExporter.import(it) }
             mainHandler.post {
-                dialog = null
+                closeDialog()
                 when {
                     plaintext == null -> toast(context.getString(R.string.backup_import_wrong_password), long = true)
                     config == null -> toast(context.getString(R.string.backup_import_failed), long = true)
@@ -187,12 +232,19 @@ class SettingsViewModel(
         contactRepository.saveContacts(config.contacts)
         settings.saveQuietRules(config.quietRules)
 
-        volumePercent = config.volumePercent
-        overrideSoundType = config.overrideSoundType
-        messageVolumePercent = config.messageVolumePercent
-        messageSoundEnabled = config.messageSoundEnabled
-        messageSoundType = config.messageSoundType
-        quietRules = settings.getQuietRules()
+        setState {
+            it.copy(
+                volumePercent = config.volumePercent,
+                overrideSoundType = config.overrideSoundType,
+                messageVolumePercent = config.messageVolumePercent,
+                messageSoundEnabled = config.messageSoundEnabled,
+                messageSoundType = config.messageSoundType,
+                quietRules = settings.getQuietRules(),
+                callAlertMode = config.callAlertMode,
+                repeatWindowMinutes = config.repeatCallWindowMinutes,
+                escalateCallVolume = config.escalateCallVolume
+            )
+        }
         onContactsChanged()
 
         toast(context.getString(R.string.backup_import_success))
@@ -203,64 +255,33 @@ class SettingsViewModel(
         }
     }
 
-    fun openAddQuietRule() {
-        if (quietRules.size >= AlertSettingsRepository.MAX_QUIET_RULES) {
+    private fun openAddQuietRule() {
+        if (state.value.quietRules.size >= AlertSettingsRepository.MAX_QUIET_RULES) {
             toast(context.getString(R.string.quiet_max_rules))
         } else {
-            dialog = SettingsDialog.AddQuietRule
+            openDialog(SettingsDialog.AddQuietRule)
         }
     }
 
-    fun addQuietRule(rule: QuietRule): Boolean {
+    private fun addQuietRule(rule: QuietRule) {
         if (!QuietRulePolicy.isValid(rule.days, rule.startHour, rule.startMinute, rule.endHour, rule.endMinute)) {
             toast(context.getString(R.string.quiet_invalid_rule))
-            return false
+            return
         }
-        quietRules = quietRules + rule
-        settings.saveQuietRules(quietRules)
+        setState { it.copy(quietRules = it.quietRules + rule, dialog = null) }
+        settings.saveQuietRules(state.value.quietRules)
         if (settings.isInQuietPeriod()) CallMonitorService.getInstance()?.suspendActiveAlert()
-        return true
     }
 
-    fun deleteQuietRule(index: Int) {
-        quietRules = quietRules.filterIndexed { i, _ -> i != index }
-        settings.saveQuietRules(quietRules)
+    private fun openDeleteQuietRule(index: Int) {
+        val rule = state.value.quietRules.getOrNull(index) ?: return
+        openDialog(SettingsDialog.DeleteQuietRule(index, rule))
     }
 
-    fun formatRuleDays(rule: QuietRule): String {
-        if (rule.days.size == 7) return context.getString(R.string.quiet_every_day)
-        val dayNames = mapOf(
-            Calendar.MONDAY to context.getString(R.string.day_mon),
-            Calendar.TUESDAY to context.getString(R.string.day_tue),
-            Calendar.WEDNESDAY to context.getString(R.string.day_wed),
-            Calendar.THURSDAY to context.getString(R.string.day_thu),
-            Calendar.FRIDAY to context.getString(R.string.day_fri),
-            Calendar.SATURDAY to context.getString(R.string.day_sat),
-            Calendar.SUNDAY to context.getString(R.string.day_sun)
-        )
-        val orderedDays = listOf(
-            Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY,
-            Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY, Calendar.SUNDAY
-        )
-        val sorted = orderedDays.filter { it in rule.days }
-        if (sorted.size >= 2) {
-            val first = orderedDays.indexOf(sorted.first())
-            val last = orderedDays.indexOf(sorted.last())
-            if (last - first + 1 == sorted.size) {
-                return "${dayNames[sorted.first()]}-${dayNames[sorted.last()]}"
-            }
-        }
-        return sorted.mapNotNull { dayNames[it] }.joinToString(", ")
+    private fun deleteQuietRule(index: Int) {
+        setState { current -> current.copy(quietRules = current.quietRules.filterIndexed { i, _ -> i != index }) }
+        settings.saveQuietRules(state.value.quietRules)
     }
-
-    fun formatRuleTime(rule: QuietRule): String {
-        val from = String.format(Locale.US, "%02d:%02d", rule.startHour, rule.startMinute)
-        val to = String.format(Locale.US, "%02d:%02d", rule.endHour, rule.endMinute)
-        val crossMidnight = rule.endHour * 60 + rule.endMinute <= rule.startHour * 60 + rule.startMinute
-        return if (crossMidnight) "$from - $to ${context.getString(R.string.quiet_next_day)}" else "$from - $to"
-    }
-
-    fun closeDialog() { dialog = null }
 
     private fun toast(text: String, long: Boolean = false) =
         Toast.makeText(context, text, if (long) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()

@@ -22,7 +22,7 @@ Do Not Disturb mode.
 
 | Document | What it covers |
 |---|---|
-| [architecture.md](architecture.md) | Module layout & dependency graph, dependency injection, source sets, product flavors, component map, runtime processes |
+| [architecture.md](architecture.md) | Module layout & dependency graph, the screen folder system (`<screen>/` + `<screen>/component/`) and the `UiState` / `Action` design pattern, dependency injection, source sets, product flavors, component map, runtime processes |
 | [call-monitoring.md](call-monitoring.md) | The core feature: foreground service, sound override engine (cellular + messenger/VoIP calls), all decision policies, repeat-call mode, quiet hours, mute timer |
 | [message-alerts.md](message-alerts.md) | VIP message alerts for WhatsApp / Google Messages / Telegram / Viber: notification listener, hashing, pairing, dedup |
 | [security-and-privacy.md](security-and-privacy.md) | Permissions, cryptography reference, threat model, data handling, what never leaves the device |
@@ -67,6 +67,10 @@ the full variant matrix.
   `core/domain/src/main/...`, `policy/AlertGatePolicy.kt` → `core/policy/src/main/...`.
   `feature/home/HomeScreen.kt` → `feature/src/main/java/com/arjun/core_alert/feature/home/HomeScreen.kt`,
   `navigation/CoreAlertRoot.kt` → `feature/src/main/java/com/arjun/core_alert/feature/navigation/CoreAlertRoot.kt`.
+  Cards and dialogs sit in the screen's `component/` sub-package:
+  `home/component/HomeDialogs.kt` → `feature/src/main/java/com/arjun/core_alert/feature/home/component/HomeDialogs.kt`,
+  `settings/component/VolumeCard.kt` → `…/settings/component/VolumeCard.kt`,
+  `privacy/component/PrivacyCard.kt` → `…/privacy/component/PrivacyCard.kt`.
   Files that belong to `:app` keep their real sub-path
   (`MainActivity.kt` → `app/src/main/java/com/arjun/core_alert/MainActivity.kt`,
   `CoreAlertApp.kt` → `app/src/main/...`); a named source set replaces `main`

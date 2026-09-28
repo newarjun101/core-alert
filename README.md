@@ -61,7 +61,7 @@ Full technical documentation lives in [`docs/`](docs/README.md):
 
 | | |
 |---|---|
-| [Architecture](docs/architecture.md) | the seven Gradle modules, dependency injection (Koin), source sets, product flavors, component map, data flows |
+| [Architecture](docs/architecture.md) | the seven Gradle modules, dependency injection (Koin), the screen folder system and the `UiState` / `Action` design pattern, source sets, product flavors, component map, data flows |
 | [Call monitoring](docs/call-monitoring.md) | foreground service, sound override, all decision policies, repeat-call mode, quiet hours, mute timer |
 | [Message alerts](docs/message-alerts.md) | WhatsApp / Google Messages / Telegram / Viber notification pipeline, plus messenger-call detection |
 | [Security & privacy](docs/security-and-privacy.md) | permissions, cryptography, threat model, data handling |
@@ -69,6 +69,44 @@ Full technical documentation lives in [`docs/`](docs/README.md):
 | [UI & resources](docs/ui-and-resources.md) | screens, theming, palettes, localisation |
 | [Build, test & release](docs/build-release-testing.md) | flavors, signing, dependencies, test suite, release checklist |
 | [Class reference](docs/class-reference.md) | index of the Kotlin source files, grouped by module |
+
+## Source layout & design pattern
+
+Every screen lives in its own package under `feature/src/main/java/com/arjun/core_alert/feature/`
+and follows the same folder system:
+
+```
+feature/<screen>/
+├── <Screen>Screen.kt     # sealed <Screen>Dialog union + the Compose shell (layout only)
+├── <Screen>UiState.kt    # immutable state the UI reads (StateFlow<…UiState>)
+├── <Screen>Action.kt     # sealed actions — in-screen events (taps, dialogs)
+├── <Screen>ViewModel.kt  # handleAction(action) → setState { … }
+└── component/            # one file per card or dialog (internal entry points)
+```
+
+| Package | Contents |
+|---|---|
+| `home/`, `home/component/` | Home screen (4 files) + 8 card/dialog components |
+| `settings/`, `settings/component/` | Settings screen (4 files) + 8 card/dialog components |
+| `privacy/`, `privacy/component/` | Privacy screen (static, no state) + its card |
+| `navigation/` | `CoreAlertRoot`, `AppRoute`, `featureModule` — owns the drawer + `NavHost` |
+
+The design pattern is a small, strict MVI-lite contract:
+
+- **State** — one immutable `<Screen>UiState` data class per screen, held in a
+  `MutableStateFlow` inside the view model and collected with `collectAsState()` in
+  `CoreAlertRoot`. Composables receive `state` only — **no composable ever sees a view model**.
+- **Action** — every event is a sealed `HomeAction` / `SettingsAction` dispatched through
+  the screen parameter `onAction: (<Screen>Action) -> Unit` → `handleAction(action)` →
+  `setState { … }`, whose `derive()` re-runs the call-mode summary, mute countdown and
+  per-contact message states so nothing goes stale. That includes host-driven triggers such
+  as `HomeAction.Refresh`, which `CoreAlertRoot` dispatches when the `HOME` route becomes
+  current (a route change inside the activity never triggers `onResume()`).
+
+Navigation itself is pure state: `NavHost` route + drawer back stack, both derived inside
+`CoreAlertRoot`.
+
+---
 
 ## Building
 

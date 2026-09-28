@@ -23,17 +23,23 @@ Legend: **P** = pure/unit-tested policy · **UI** = Android UI · **S** = servic
 
 ---
 
-## 2. `:feature` — screens, view models & navigation (main 9 files / 3 069 LOC · test 1 / 25)
+## 2. `:feature` — screens, view models & navigation (main 29 files / 3 713 LOC · test 1 / 25)
 
 Every screen lives here, behind the single `:app` → `:feature` edge. Package
 `com.arjun.core_alert.feature.*`; resources resolve through
-`com.arjun.core_alert.feature.R`.
+`com.arjun.core_alert.feature.R`. No composable receives a view model: `CoreAlertRoot`
+collects the view models' `StateFlow`s and passes an immutable `UiState` plus an
+action lambda (`HomeScreen(state, onAction)` / `SettingsScreen(state, onAction)`). Each
+screen is a family of files rather than one big one: `<Screen>Screen.kt` (shell +
+dialogs union), `<Screen>UiState.kt` (the state data class), `<Screen>Action.kt` (the
+sealed action contract) plus a `component/` folder per screen (`settings/component/`,
+`home/component/`) holding the individual cards and dialogs.
 
 ### 2.1 Navigation (`feature/src/main/…/navigation`)
 
 | File | Kind | Description |
 |---|---|---|
-| `CoreAlertRoot.kt` | UI | root composable: obtains `HomeViewModel` / `SettingsViewModel` with `koinViewModel()` (`parametersOf({ home.reloadContacts() })` for the latter), `ModalNavigationDrawer` + `Scaffold` + `TopAppBar` + `NavHost` (routes `home` / `settings` / `privacy`), drawer ⇄ back-stack sync (`popUpTo(start) { saveState }`, `launchSingleTop`, `restoreState`), Home-only FAB, drawer-open `BackHandler`, drawer header/items (228 LOC) |
+| `CoreAlertRoot.kt` | UI | root composable: obtains `HomeViewModel` / `SettingsViewModel` with `koinViewModel()` (`parametersOf({ home.reloadContacts() })` for the latter), collects `home.state` / `settings.state` with `collectAsState()` and hands `state` + `onAction` to the screens, `ModalNavigationDrawer` + `Scaffold` + `TopAppBar` + `NavHost` (routes `home` / `settings` / `privacy`), drawer ⇄ back-stack sync (`popUpTo(start) { saveState }`, `launchSingleTop`, `restoreState`), Home-only FAB (dispatches `HomeAction.OpenAddChoice`), a `LaunchedEffect(current)` that dispatches `HomeAction.Refresh` whenever the `HOME` route becomes current (so the summary / permissions / contacts picked up in Settings or the system settings are re-derived on return), drawer-open `BackHandler`, drawer header/items (237 LOC) |
 | `AppRoute.kt` | UI | `enum AppRoute(route, labelRes, iconRes)` — `HOME` / `SETTINGS` / `PRIVACY` + `AppRoute.fromRoute(String?)` fallback to `HOME` (19 LOC) |
 | `FeatureModule.kt` | DI | `featureModule`: `viewModel HomeViewModel`, `viewModel { (onContactsChanged) -> SettingsViewModel }` (14 LOC) |
 
@@ -41,17 +47,37 @@ Every screen lives here, behind the single `:app` → `:feature` edge. Package
 
 | File | Kind | Description |
 |---|---|---|
-| `HomeScreen.kt` | UI | `HomeDialog` sealed interface and the `LazyColumn` screen: warning banner, hero card + pulse, call-mode summary, mute, permissions, contact rows, empty state; registers the `RequestMultiplePermissions` / `PickContact` launchers and fires the system-settings intents (880 LOC) |
-| `HomeViewModel.kt` | UI | `HomeViewModel` (`androidx.lifecycle.ViewModel`, `viewModel { … }` in Koin): all Home state (`contacts`, `serviceEnabled`, runtime/DND grants, warning, mute countdown, `dialog`), service/pause toggling, contact CRUD + message-app pairing, permission results (`onPermissionResult`, `onContactPicked`); takes `Application` + `AlertSettingsRepository` + `ContactRepository` + `VipMessageAlertsProvider`; 60 s mute-countdown `Handler` cancelled in `onCleared()`; `refreshStrings()` rebuilds `callModeSummary` + `muteCountdown` (called from `onResume()` and `MainActivity.onConfigurationChanged()`) (408 LOC) |
-| `HomeDialogs.kt` | UI | add/edit contact, multi-number picker, mute-hours stepper, shared `CallAlertSettingsContent`, call-mode settings dialog (254 LOC) |
+| `HomeScreen.kt` | UI | `HomeDialog` sealed interface (`AddChoice`, `ContactForm`, `ContactNumbers`, `RemoveContact`, `ContactCallMode`, `CallModeSettings`, `MuteHours`, `DndExplain`, `MessageAccess`, `MessagePair`) and the `LazyColumn` shell (`HomeScreen(state: HomeUiState, onAction: (HomeAction) -> Unit)`): warning banner, hero card, call-mode summary, mute, permissions, contact rows, empty state, then the dialog dispatch — every card and dialog itself lives in `component/` (83 LOC) |
+| `HomeUiState.kt` | UI | `data HomeUiState` — the state contract the Home screen reads (contacts, service/permission state, warning, mute countdown, call-mode summary + the call-alert slice, `messageStates`, `dialog`) plus the `runtimePermissions` list and the `Resources`-based label helpers `messageKey` / `phoneOptionLabel` / `messageAppName` / `messageMenuTitle` (66 LOC) |
+| `HomeAction.kt` | UI | `sealed interface HomeAction` — the 24 actions the Home screen dispatches (`Refresh` from navigation, service toggle, permission results, dialogs, contact CRUD, call-alert setters, message pairing, `CloseDialog`) — always routed through the `onAction` screen parameter (34 LOC) |
+| `HomeViewModel.kt` | UI | `HomeViewModel` (`androidx.lifecycle.ViewModel`, `viewModel { … }` in Koin): owns a single `MutableStateFlow<HomeUiState>` — `state: StateFlow<HomeUiState>` is the only thing the UI reads and `handleAction(HomeAction)` is the only thing it calls; `setState { … }` runs `derive()` (call-mode summary, call-alert slice, per-contact message states) on every write; service/pause toggling, contact CRUD + message-app pairing, permission results; takes `Application` + `AlertSettingsRepository` + `ContactRepository` + `VipMessageAlertsProvider`; 60 s mute-countdown `Handler` cancelled in `onCleared()`; `refreshStrings()` re-derives `callModeSummary` + `muteCountdown` (called from `onResume()` and `MainActivity.onConfigurationChanged()`); `onResume()`/`onPause()`/`reloadContacts()` stay public for the activity and the settings model; `HomeAction.Refresh` runs the same `onResume()` resync (dispatched by `CoreAlertRoot` when the `HOME` route becomes current) (467 LOC) |
+| `component/WarningBanner.kt` | UI | warning banner (`internal fun WarningBanner`): icon, message and an action button that fires the battery-optimisation / app-details intent; helper `TextButtonTone` stays file-private (106 LOC) |
+| `component/HeroCard.kt` | UI | hero monitoring card (`internal fun HeroCard`): gradient, `HeroBell`, `HeroChip`, hint + service switch → `ServiceToggled`, and the animated `DrawScope.drawPulseRing` (only while monitoring); helpers stay file-private (224 LOC) |
+| `component/CallModeSummaryButton.kt` | UI | call-mode summary pill (`internal fun CallModeSummaryButton`) — a plain `summary` + `onClick`, wired by the shell to `OpenCallModeSettings` (32 LOC) |
+| `component/MuteCard.kt` | UI | mute card (`internal fun MuteCard`): countdown text + pause toggle wired to `ToggleMute` (92 LOC) |
+| `component/PermissionsCard.kt` | UI | permission rows (`internal fun PermissionsCard`): registers the `RequestMultiplePermissions` launcher (`PermissionResult`) and fires the notification-policy / listener / battery intents from `LocalContext`; helper `PermissionRow` stays file-private (131 LOC) |
+| `component/ContactRow.kt` | UI | contact row (`internal fun ContactRow`): initials avatar, number badge and the per-contact `ContactMenu` (message-app pairing, call mode, edit, remove); helpers `ContactMenu` / `contactInitials` stay file-private (180 LOC) |
+| `component/EmptyContactsCard.kt` | UI | empty state (`internal fun EmptyContactsCard`): icon, title, body and hint pill — static, no action (74 LOC) |
+| `component/HomeDialogs.kt` | UI | dispatches on `HomeUiState.dialog`: add-choice (registers the `PickContact` launcher → `ContactPicked`), add/edit contact, multi-number picker, remove / call-mode confirms, mute-hours stepper, DND and message dialogs, call-mode settings; also holds the shared `CallAlertSettingsContent` (driven by explicit `callAlertMode` / `repeatWindowMinutes` / `escalateCallVolume` / `volumePercent` params + three setters and shared with the Settings volume card) — all `SosDialog`s shaped `(…, onAction)` (390 LOC) |
 
 ### 2.3 Settings & privacy (`feature/src/main/…/settings`, `…/privacy`)
 
 | File | Kind | Description |
 |---|---|---|
-| `SettingsScreen.kt` | UI | `SettingsDialog` sealed interface and the cards: appearance, message alerts, volume, sound type, quiet hours, backup; owns the `CreateDocument` / `OpenDocument` launchers, the password prompt and the `LanguageToggle` (System / English / မြန်မာ); palette, night mode and language are applied live — no `activity.recreate()` (860 LOC) |
-| `SettingsViewModel.kt` | UI | `SettingsViewModel`: dialog state, `beginExport(password)` (filename) + `onExportUri`, `onImportUri` + `decryptPendingImport` (decrypt off the UI thread, result posted to the main looper, `applyImportedConfig`), quiet-rule CRUD, `selectPalette` (pref + `ThemeManager.applyPalette`), `selectLanguage` (pref + live resources through `LanguageManager.apply`), `selectNightMode`, message-alert setters; takes `Application` + `AlertSettingsRepository` + `ThemeRepository` + `ContactRepository` + `onContactsChanged` (267 LOC) |
-| `PrivacyScreen.kt` | UI | privacy/licensing screen: three static `AppCard`s plus `linkedBody()`, which turns URLs, e-mail addresses and phone numbers in the body text into tappable `LinkAnnotation.Url` links (accent + underline, opened through `LocalUriHandler`) (139 LOC) |
+| `SettingsScreen.kt` | UI | `SettingsDialog` sealed interface (`ExportPassword`, `ImportConfirm`, `ImportPassword`, `AddQuietRule`, `DeleteQuietRule`), the shell `SettingsScreen(state: SettingsUiState, onAction: (SettingsAction) -> Unit)` that stacks the cards and owns the `CreateDocument` / `OpenDocument` launchers (the suggested `corealert-backup-<timestamp>.json` name is built here), plus `exportFileName()` — the cards and dialogs themselves live in `component/` (82 LOC) |
+| `SettingsUiState.kt` | UI | `data SettingsUiState` — the state contract the Settings screen reads (volumes, sound types, palette/night mode/language, quiet rules, call-alert slice, `dialog`) plus the `Resources`-based helpers `formatRuleDays` / `formatRuleTime` (61 LOC) |
+| `SettingsAction.kt` | UI | `sealed interface SettingsAction` — the 22 actions the Settings screen dispatches (appearance, volumes, sound types, call-alert setters, export/import, quiet-rule CRUD, `CloseDialog`) (34 LOC) |
+| `SettingsViewModel.kt` | UI | `SettingsViewModel`: owns a single `MutableStateFlow<SettingsUiState>` (`state` + `handleAction`), the export/import file work (`ConfirmExportPassword` stores the password, `ExportUri` writes the encrypted envelope through `ContentResolver`, `ImportUri` reads/validates it, `DecryptPendingImport` runs the PBKDF2 decrypt off the UI thread and posts back to the main looper, `applyImportedConfig`), quiet-rule CRUD (validation keeps the dialog open), `SelectPalette` (pref + `ThemeManager.applyPalette`), `SelectLanguage` (pref + live resources through `LanguageManager.apply`, carrying the `Activity` in the action), `SelectNightMode`, message-alert setters; takes `Application` + `AlertSettingsRepository` + `ThemeRepository` + `ContactRepository` + `onContactsChanged` + `VipMessageAlertsProvider` (288 LOC) |
+| `PrivacyScreen.kt` | UI | privacy/licensing shell (`PrivacyScreen()`): a `Column` of three `PrivacyCard`s with the string resources resolved here — static, so no `UiState` / `Action` / view model (46 LOC) |
+| `component/PrivacyCard.kt` | UI | privacy card (`internal fun PrivacyCard`): `CardHeader` + `OkChip` + `linkedBody()`, which turns URLs, e-mail addresses and phone numbers in the body text into tappable `LinkAnnotation.Url` links (accent + underline, opened through `LocalUriHandler`); helpers `OkChip` / `linkedBody` / `linkPattern` stay file-private (103 LOC) |
+| `component/AppearanceCard.kt` | UI | appearance card (`internal fun AppearanceCard`): four `SwatchEntry` swatches → `SelectPalette`, `ModeToggle` → `SelectNightMode`, `LanguageToggle` → `SelectLanguage(language, activity)`; helpers `SwatchEntry` / `ModeToggle` / `LanguageToggle` stay file-private (221 LOC) |
+| `component/MessageAlertsCard.kt` | UI | VIP-message sound card: enable switch, volume slider, default-vs-contact radio group, alpha-dimmed when disabled (87 LOC) |
+| `component/VolumeCard.kt` | UI | ringtone volume slider + shared `CallAlertSettingsContent` (first/second call, repeat window, escalation switch) wired to `SetVolume` / `SetCallAlertMode` / `SetRepeatWindow` / `SetEscalateVolume` (52 LOC) |
+| `component/SettingsControls.kt` | UI | the two controls shared by several cards: `ValuePill` (percent badge) and `VolumeSlider` (accent thumb/track, `steps`, `enabled`) (58 LOC) |
+| `component/SoundTypeCard.kt` | UI | override-sound card: ringtone vs notification radio group → `SetOverrideSoundType` (45 LOC) |
+| `component/QuietHoursCard.kt` | UI | quiet-hours card: `QuietRuleRow`s (day/time summary + delete) and the add button → `OpenAddQuietRule` (disabled past `MAX_QUIET_RULES`); helpers `QuietRuleRow` / `TextButtonLike` stay file-private (146 LOC) |
+| `component/BackupCard.kt` | UI | backup card: export → `OpenExportPassword`, import → `OpenImportConfirm` (75 LOC) |
+| `component/SettingsDialogs.kt` | UI | dispatches on `SettingsUiState.dialog`: `ExportPasswordDialog` (empty/mismatch validation keeps it open, otherwise `ConfirmExportPassword` + `onExport` launches the picker), import-confirm/password (⇒ `DecryptPendingImport`), `AddQuietRuleDialog` (weekday `DayChip`s, `TimeStepper`s, cross-midnight hint, `ConfirmAddQuietRule`), delete-rule confirm — all `SosDialog`s shaped `(…, onAction)` (266 LOC) |
 
 ### 2.4 Tests
 
@@ -82,7 +108,7 @@ every seam the other modules implement. All decision logic lives in `:core:polic
 
 | File | Kind | Description |
 |---|---|---|
-| `models/` (11 files, 94 LOC) | D | **one model per file**, package `com.arjun.core_alert.models`: `VipContact`, `QuietRule`, `AppPalette` (injected `BuildInfo` lives beside them), `MessageApp`, `MessageAlertState`, `PendingMessagePairing`, `CallAlertMode { INHERIT, FIRST, SECOND }`, `CallAlertDecision { shouldRing, volumePercent, exactVolume }`, `NightMode { FOLLOW_SYSTEM, LIGHT, DARK }`, `AppLanguage { SYSTEM, ENGLISH, MYANMAR }` |
+| `models/` (11 files, 91 LOC) | D | **one model per file**, package `com.arjun.core_alert.models`: `VipContact`, `QuietRule`, `AppPalette` (injected `BuildInfo` lives beside them), `MessageApp`, `MessageAlertState`, `PendingMessagePairing`, `CallAlertMode { INHERIT, FIRST, SECOND }`, `CallAlertDecision { shouldRing, volumePercent, exactVolume }`, `NightMode { FOLLOW_SYSTEM, LIGHT, DARK }`, `AppLanguage { SYSTEM, ENGLISH, MYANMAR }` |
 | `util/PhoneUtils.kt` | P | normalisation + matching (Italian heuristics, ≥8-digit suffix match) (30 LOC) |
 
 ---
@@ -128,7 +154,7 @@ and is Android-free apart from `AudioOverridePolicy`, which reads `android.media
 | `MessageBindingRepositoryImpl.kt` | D | pairing state, bindings, dedup fingerprints, number migration + legacy migration (189 LOC) |
 | `ConfigExporter.kt` | D | `AppConfig` + build/import/validate of the configuration JSON, rule range validation (181 LOC) |
 | `ConfigCrypto.kt` | C | PBKDF2-HmacSHA256 600 k + AES-256-GCM backup envelope `corealert-enc-v1` (75 LOC) |
-| `DataModule.kt` | DI | `dataModule`: `single PrefsDataSource` + one `single` per repository bound to its interface, `factory<RepeatCallRepository>` (18 LOC) |
+| `DataModule.kt` | DI | `dataModule`: `single PrefsDataSource` + one `single` per repository bound to its interface, `factory<RepeatCallRepository>` (17 LOC) |
 
 ---
 

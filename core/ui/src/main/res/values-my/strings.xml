@@ -97,8 +97,8 @@
     <string name="mute_subtitle">၁–၁၂ နာရီ ယာယီရပ်နားရန်</string>
     <string name="mute_dialog_title">VIP သတိပေးချက်များ ရပ်ရန်</string>
     <string name="mute_dialog_message">ရွေးချယ်ထားသော အချိန်အတွင်း VIP ခေါ်သံနှင့် မက်ဆေ့ချ်အသံများ ပိတ်သွားပါမည်။</string>
-    <string name="mute_countdown">VIP သတိပေးချက်များ ရပ်ထားသည် — %1$d နာရီ %2$d မိနစ်အတွင်း ပြန်ဖွင့်ပါမည်</string>
-    <string name="mute_activated">VIP သတိပေးချက်များ %1$d နာရီ ရပ်ထားပြီးပါပြီ</string>
+    <string name="mute_countdown">%1$d နာရီ %2$d မိနစ်အတွင်း ပြန်ဖွင့်ပါမည်</string>
+    <string name="mute_activated">%1$d နာရီ</string>
     <string name="mute_cancelled">VIP သတိပေးချက်များ ပြန်ဖွင့်ပြီးပါပြီ</string>
     <string name="settings_sound_title">ကျော်ဖြတ် အသံ</string>
     <string name="settings_sound_ringtone">ဖုန်းခေါ်သံ</string>

@@ -405,7 +405,7 @@ Temporary global mute, 1–12 hours, available from Home.
 | `ContactRingtoneHelper.kt` | per-contact custom ringtone lookup | 45 |
 | `BootReceiver.kt` | boot / package-replace restart + mute alarm scheduling | 76 |
 | `MuteTimerReceiver.kt` | mute expiry | 24 |
-| `feature/home/HomeScreen.kt` | Home UI: hero card + service switch, contacts, mute, warnings | 880 |
+| `feature/home/HomeScreen.kt` | Home UI shell: `LazyColumn` layout + `HomeDialog` union (cards/dialogs live in `feature/home/component/`) | 83 |
 | `HomeWarningPolicy.kt`, `ServiceEnablePolicy.kt`, `PermissionPolicy.kt`, `WarnThrottlePolicy.kt` | small pure decision helpers | ≤ 20 each |
 
 ---

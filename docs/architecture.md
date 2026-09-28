@@ -17,12 +17,12 @@ CoreAlert/
 │       └── main/                 # 4 Kotlin files, 155 LOC (MainActivity, BaseActivity, Application, appModule)
 ├── feature/                      # :feature — all screens, view models, navigation
 │   └── src/
-│       ├── main/                 # 9 Kotlin files, 3 069 LOC (home/, settings/, privacy/, navigation/)
+│       ├── main/                 # 29 Kotlin files, 3 713 LOC (home/ + home/component/, settings/ + settings/component/, privacy/ + privacy/component/, navigation/)
 │       └── test/                 # AppRouteTest (1 file, 25 LOC)
 ├── core/
 │   ├── domain/                   # :core:domain — models + repository interfaces
 │   │   └── src/main/             # 18 files, 300 LOC   (+ 2 test files)
-│   │       └── models/           # one type per file (11 files, 94 LOC)
+│   │       └── models/           # one type per file (11 files, 91 LOC)
 │   ├── policy/                   # :core:policy — pure decision policies
 │   │   └── src/main/             # 15 files, 369 LOC   (+ 15 test files)
 │   ├── data/                     # :core:data — repositories + persistence
@@ -69,7 +69,7 @@ There is **no** `androidTest/` source set — the project is covered by JVM unit
 | `:core:data` | `…corealert.data` | the repository **implementations** (`*RepositoryImpl`), the `PrefsDataSource` they share, `ConfigExporter` / `ConfigCrypto` | domain, policy |
 | `:core:ui` | `…corealert.coreui` | **every** `res/` entry (drawables, values, fonts, xml, mipmaps), `CoreAlertTheme`, shared components, `ThemeManager` | domain |
 | `:core:monitoring` | `…corealert.monitoring` | `CallMonitorService`, the two receivers, the notification listener, `VipMessageAlertsProvider` | domain, policy, ui |
-| `:feature` | `…corealert.feature` | **every screen** — `navigation/` (`CoreAlertRoot`, `AppRoute`, `featureModule`), `home/` (`HomeScreen`, `HomeDialogs`, `HomeViewModel`), `settings/` (`SettingsScreen`, `SettingsViewModel`), `privacy/` (`PrivacyScreen`); owns the Navigation-Compose graph and obtains the view models with `koinViewModel()` | domain, policy, data, monitoring, ui |
+| `:feature` | `…corealert.feature` | **every screen** — `navigation/` (`CoreAlertRoot`, `AppRoute`, `featureModule`), `home/` (`HomeScreen`, `HomeViewModel`, `HomeUiState`, `HomeAction`) plus `home/component/` (the eight Home cards/dialogs: `WarningBanner`, `HeroCard`, `CallModeSummaryButton`, `MuteCard`, `PermissionsCard`, `ContactRow`, `EmptyContactsCard`, `HomeDialogs`), `settings/` (`SettingsScreen`, `SettingsViewModel`, `SettingsUiState`, `SettingsAction`) plus `settings/component/` (the eight Settings cards/dialogs: `AppearanceCard`, `MessageAlertsCard`, `VolumeCard`, `SettingsControls`, `SoundTypeCard`, `QuietHoursCard`, `BackupCard`, `SettingsDialogs`), `privacy/` (`PrivacyScreen`) plus `privacy/component/` (`PrivacyCard`); owns the Navigation-Compose graph and obtains the view models with `koinViewModel()`, but screens are rendered from an immutable `UiState` + `(HomeAction)` / `(SettingsAction)` dispatch — no composable takes a view model, and each contract is split across its own files (`*UiState.kt` / `*Action.kt`) | domain, policy, data, monitoring, ui |
 | `:app` | `…corealert` | `MainActivity` / `BaseActivity` / `CoreAlertApp` (the `Application`), `appModule`, the manifest | `:feature` + all of the above |
 
 `:core:monitoring → :core:ui` exists **only** because the service and listener post
@@ -116,6 +116,33 @@ every module's generated `R` carries the transitive resource table. Consequences
   so `R.string.*` / `R.drawable.*` keep working inside the screens.
 * Files inside `:core:ui` / `:core:monitoring` that need resources import their own
   module's R (`com.arjun.core_alert.coreui.R`) — a library cannot see the app's R.
+
+### 1.4 Screen packages — the folder system
+
+Every screen in `:feature` lives in its own package and follows the same file layout, so a
+new screen is a copy-paste of an existing one:
+
+```
+feature/<screen>/
+├── <Screen>Screen.kt     # sealed <Screen>Dialog union + the @Composable shell (layout only)
+├── <Screen>UiState.kt    # data <Screen>UiState — the only state the UI reads
+├── <Screen>Action.kt     # sealed <Screen>Action — in-screen events (taps, dialogs)
+├── <Screen>ViewModel.kt  # handleAction(action) → setState { … } (re-derives everything)
+└── component/            # one file per card / dialog, internal entry points,
+                          # file-private helpers stay private
+```
+
+| Package | Files |
+|---|---|
+| `home/` | `HomeScreen`, `HomeUiState`, `HomeAction`, `HomeViewModel` |
+| `home/component/` | `WarningBanner`, `HeroCard`, `CallModeSummaryButton`, `MuteCard`, `PermissionsCard`, `ContactRow`, `EmptyContactsCard`, `HomeDialogs` (8 files) |
+| `settings/` | `SettingsScreen`, `SettingsUiState`, `SettingsAction`, `SettingsViewModel` |
+| `settings/component/` | `AppearanceCard`, `MessageAlertsCard`, `VolumeCard`, `SettingsControls`, `SoundTypeCard`, `QuietHoursCard`, `BackupCard`, `SettingsDialogs` (8 files) |
+| `privacy/` + `privacy/component/` | `PrivacyScreen` + `PrivacyCard` — static screen, so no `UiState` / `Action` / view model |
+| `navigation/` | `CoreAlertRoot`, `AppRoute`, `featureModule` — the only place that knows both view models and the `NavHost` |
+
+Two rules hold everywhere: a composable never receives a view model (only `state` +
+`onAction`), and no file mixes several cards (see §6.8 for the full contract).
 
 ---
 
@@ -297,3 +324,13 @@ These conventions show up repeatedly and are worth internalising:
    only `:core:data` knows that the backing store is `SharedPreferences`. `:core:domain`
    stays Android-free, and `:core:monitoring` never references a class owned by `:core:data`
    or `:app` (the launcher activity is addressed by component name).
+
+8. **`UiState` + sealed `Action`, never a view model in a composable.** `CoreAlertRoot`
+   collects `state: StateFlow<…UiState>` with `collectAsState()` and passes `state` plus an
+   `onAction: (<Screen>Action) -> Unit` lambda down the tree. Every event — a tap inside the
+   screen or a trigger from the host, e.g. `HomeAction.Refresh` sent by `CoreAlertRoot` when
+   the `HOME` route becomes current — is a sealed `HomeAction` / `SettingsAction` that goes
+   through `handleAction(action)` → `setState { … }`, which re-runs `derive()` so every
+   derived field (call-mode summary, mute countdown, per-contact message states) is
+   recomputed in one place. Navigation itself is pure state: `NavHost` route + drawer back
+   stack, both owned by `CoreAlertRoot`.

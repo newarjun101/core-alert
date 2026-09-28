@@ -23,20 +23,21 @@ feature's root composable.
 | `BaseActivity.kt` (59 LOC) | `AppCompatActivity` base: applies the palette theme (`ThemeManager.themeResId(theme.palette)`, `ThemeRepository` from Koin) and syncs `ThemeManager.livePalette` **before** `super.onCreate`, applies the stored app language in `attachBaseContext` (`LanguageManager.wrap`), enables edge-to-edge (`WindowCompat.setDecorFitsSystemWindows(window, false)`), repaints system bars (`applySystemBars()`) on create / resume / configuration change / window focus; `onConfigurationChanged` re-applies the stored language, repaints the bars and dispatches the new `Configuration` to the view tree (`decorView.dispatchConfigurationChanged`) so Compose re-reads strings and colours **without recreating the activity** |
 | `MainActivity.kt` (63 LOC) | Compose host: resolves `AlertSettingsRepository` from Koin, keeps `HomeViewModel` with `by viewModel()` for the lifecycle callbacks, mounts `setContent { CoreAlertTheme(palette = ThemeManager.livePalette) { CoreAlertRoot() } }` — `livePalette` is Compose state, so palette changes recompose the theme in place (all navigation state lives in `:feature`) |
 
-`feature/navigation/CoreAlertRoot.kt` (228 LOC, `:feature`) is the root composable:
+`feature/navigation/CoreAlertRoot.kt` (237 LOC, `:feature`) is the root composable:
 
 * `enum AppRoute(route, labelRes, iconRes)` (`feature/navigation/AppRoute.kt`) declares the
   three destinations: `HOME` (`"home"`), `SETTINGS` (`"settings"`), `PRIVACY` (`"privacy"`);
   `AppRoute.fromRoute(...)` falls back to `HOME`.
 * Navigation-Compose: `rememberNavController()` + `NavHost` (start destination `home`) hosts
-  `HomeScreen(home)` / `SettingsScreen(settings)` / `PrivacyScreen()`; the current
+  `HomeScreen(homeState, home::handleAction)` / `SettingsScreen(settingsState, settings::handleAction)` /
+  `PrivacyScreen()`; the current
   back-stack entry drives the top-bar title, the drawer selection and the Home-only FAB.
 * Drawer ↔ back-stack sync uses the standard top-level-destination pattern:
   `navigate(route) { popUpTo(startDestination) { saveState = true }; launchSingleTop = true;
   restoreState = true }`, so re-selecting a drawer item never duplicates a destination and
   each destination's state is restored on return.
 * `ModalNavigationDrawer` → `Scaffold`: `TopAppBar` (title per route, hamburger opens the
-  drawer), a `FloatingActionButton` shown **only on Home** (`home.openAddChoice()`, accent
+  drawer), a `FloatingActionButton` shown **only on Home** (`home.handleAction(HomeAction.OpenAddChoice)`, accent
   container).
 * Back behaviour: one `BackHandler` closes the open drawer; otherwise Navigation handles
   the stack (destination → Home → exit the activity).
@@ -45,7 +46,9 @@ feature's root composable.
   `NavigationDrawerItem`s built from `AppRoute.entries`.
 * The two view models are obtained **once, activity-scoped**, with `koinViewModel()`
   (`SettingsViewModel` receives `{ home.reloadContacts() }` through `parametersOf`); they are
-  registered in `featureModule`.
+  registered in `featureModule`. `CoreAlertRoot` is the only composable that touches them:
+  it collects `home.state` / `settings.state` with `collectAsState()` and passes the
+  immutable `UiState` plus an action lambda down the tree.
 
 `MainActivity.onResume()` does one extra thing:
 
@@ -59,13 +62,22 @@ both are resolved through the `Application` resources, so without this an in-app
 switch would leave them in the old language until the next resume (the recreated activity
 used to do that for free).
 
-### 1.1 Home (`feature/home/HomeScreen.kt`, 880 LOC + `feature/home/HomeViewModel.kt`, 408 LOC)
+### 1.1 Home (`feature/home/HomeScreen.kt`, 83 LOC + `feature/home/HomeViewModel.kt`, 467 LOC + `feature/home/HomeUiState.kt`, 66 LOC + `feature/home/HomeAction.kt`, 34 LOC + `feature/home/component/`, 8 files / 1 221 LOC)
+
+`HomeScreen.kt` holds only the `HomeDialog` union and the `LazyColumn` shell (with the
+`RequestMultiplePermissions` / `PickContact` launchers registered in
+`component/PermissionsCard.kt` and `component/HomeDialogs.kt`); every card and dialog
+lives as its own file in `feature/home/component/` (`WarningBanner.kt`, `HeroCard.kt`,
+`CallModeSummaryButton.kt`, `MuteCard.kt`, `PermissionsCard.kt`, `ContactRow.kt`,
+`EmptyContactsCard.kt`, `HomeDialogs.kt`), each taking `(state, onAction)` — `internal
+fun`, file-private helpers stay `private`.
+
 
 A `LazyColumn` with stable item keys:
 
 | Key | Composable | Contents |
 |---|---|---|
-| `warning` | `WarningBanner` | shown only when `HomeWarningPolicy` decides there is something to fix: icon, message, action button (`home.openWarningAction()`) |
+| `warning` | `WarningBanner` | shown only when `HomeWarningPolicy` decides there is something to fix: icon, message, action button (battery-optimisation / app-details intent fired from `LocalContext`) |
 | `hero` | `HeroCard` + `HeroBell` + `HeroChip` + `DrawScope.drawPulseRing` | full-bleed state card: gradient, animated pulse ring (only while monitoring), bell icon (on/off), state label (28 sp ExtraBold), hint text, service switch, bypass chip |
 | `callmode` | `CallModeSummaryButton` | "first / second call" summary → opens the `CallModeSettings` dialog |
 | `mute` | `MuteCard` | pause button + live mute countdown |
@@ -75,42 +87,64 @@ A `LazyColumn` with stable item keys:
 
 State is held by **`HomeViewModel`** (`feature/home/HomeViewModel.kt`, an
 `androidx.lifecycle.ViewModel` declared in `featureModule` and obtained in `CoreAlertRoot`
-with `koinViewModel()`; `MainActivity` reuses the same instance via `by viewModel()`) — the
-composable receives it as `home: HomeViewModel`:
+with `koinViewModel()`; `MainActivity` reuses the same instance via `by viewModel()`), but
+the screen never sees the model: `CoreAlertRoot` collects `home.state`
+(`StateFlow<HomeUiState>`, defined in `feature/home/HomeUiState.kt`) with `collectAsState()`
+and `HomeScreen(state, onAction)` passes only immutable data plus an action lambda.
 
-* `by mutableStateOf(...)` fields mirror the repositories: `contacts` (from `ContactRepository`), `serviceEnabled`,
-  `runtimeGranted`, `dndGranted`, `canEnable`, `warning`, `muteCountdown`,
-  `callModeSummary`, `dialog`.
+* `HomeUiState` is an immutable `data` class mirroring the repositories: `contacts` (from
+  `ContactRepository`), `serviceEnabled`, `runtimeGranted`, `dndGranted`,
+  `contactsPermissionGranted`, `warning`, `muteCountdown`, `callModeSummary`, the call-alert
+  slice (`callAlertMode`, `repeatWindowMinutes`, `escalateCallVolume`, `volumePercent`),
+  `messageStates`, `dialog`.
+* Every interaction is a `HomeAction` (`ServiceToggled`, `PermissionResult`, `OpenDndDialog`,
+  `ToggleMute`, `ActivateMute`, add/edit/delete contact, call-alert setters, message pairing,
+  `CloseDialog`, …) dispatched through `onAction` → `HomeViewModel.handleAction`. Writes go through
+  `setState { … }`, which re-runs `derive()` so the call-mode summary, the call-alert slice
+  and the per-contact message states always reflect the repositories.
+* `CoreAlertRoot` dispatches `HomeAction.Refresh` from a `LaunchedEffect` whenever the `HOME`
+  route becomes current; it runs the same resync as `MainActivity.onResume()` (permissions,
+  service flag, contacts, call-mode summary + mute countdown), so anything changed on the
+  Settings screen or in system settings pages is re-derived on the way back.
 * The Activity-result launchers are registered **inside the composables**
   (`rememberLauncherForActivityResult` in `PermissionsCard` and `HomeDialogs`) and hand
-  their results back to the model: `onPermissionResult(results)` and
-  `onContactPicked(uri)`. The model exposes `runtimePermissions` and
-  `needsContactsPermission()` so the screen knows what to request.
+  their results back as actions (`PermissionResult(results)`, `ContactPicked(uri)`). The
+  `runtimePermissions` list lives in `HomeUiState.kt` and `state.contactsPermissionGranted`
+  tells the screen whether to request or to open the picker.
 * Deep links to system settings (notification-policy access, notification listener,
   battery optimisation exemption) fire from `LocalContext` in the composable, so no
   `Activity` reference is kept by the model (no `StaticFieldLeak`).
 * One `Handler` loop posts every 60 s **only while muted** (`countdownHandler` /
   `countdownRunnable`) so the mute countdown never goes stale; `onResume()`/`onPause()`
   (forwarded by the activity) restart/stop it, `refreshStrings()` (also driven by the
-  activity's config change) rebuilds the two cached strings, and `onCleared()` cancels it.
+  activity's config change) re-derives `callModeSummary` and rebuilds `muteCountdown`, and
+  `onCleared()` cancels it.
 * Runtime permissions requested: `READ_PHONE_STATE`, `READ_CALL_LOG`, `READ_CONTACTS`,
   `POST_NOTIFICATIONS` (API ≥ 33).
 * **Contact CRUD**: add-choice dialog (phonebook vs manual) → `PickContact` launcher →
   multi-number selection dialog (`ContactImportPolicy.uniqueOptions` / `createVipContacts`,
   `plurals.contact_numbers_added`) → edit/remove confirm dialogs →
   `contactRepository.saveContacts(...)` + `CallMonitorService.refreshNotification()`.
-* **Message-alert state machine**: `MessageApp` pairing → unpair / cancel /
-  notification-listener access + `beginMessagePairing()`.
+* **Message-alert state machine**: `MessageApp` pairing driven by `MessageAlertTap` /
+  `BeginMessagePairing` / `CancelMessagePairing` → unpair / cancel /
+  notification-listener access.
 * Permission health feeds `HomeWarningPolicy.decide(...)`, which drives the warning banner
   (critical permissions, auto-revoke, battery optimisation).
-* Because `dialog` lives in the model, an open dialog **survives rotation** instead of
+* Because `dialog` lives in `HomeUiState`, an open dialog **survives rotation** instead of
   being rebuilt by the activity.
 
-### 1.2 Settings (`feature/settings/SettingsScreen.kt`, 860 LOC + `feature/settings/SettingsViewModel.kt`, 267 LOC)
+### 1.2 Settings (`feature/settings/SettingsScreen.kt`, 82 LOC + `feature/settings/SettingsViewModel.kt`, 288 LOC + `feature/settings/SettingsUiState.kt`, 61 LOC + `feature/settings/SettingsAction.kt`, 34 LOC + `feature/settings/component/`, 8 files / 964 LOC)
+
+`SettingsScreen.kt` holds only the `SettingsDialog` union, the column shell (with the
+`CreateDocument` / `OpenDocument` launchers) and `exportFileName()`; every card and
+dialog below lives as its own file in `feature/settings/component/`
+(`AppearanceCard.kt`, `MessageAlertsCard.kt`, `VolumeCard.kt`, `SettingsControls.kt`,
+`SoundTypeCard.kt`, `QuietHoursCard.kt`, `BackupCard.kt`, `SettingsDialogs.kt`), each
+taking `(state, onAction)` — `internal fun`, file-private helpers stay `private`.
 
 | Card | Controls |
 |---|---|
-| `AppearanceCard` | four `SwatchEntry` circles (colour drawn in code, 3 dp selected stroke) → `settings.selectPalette(...)` → `ThemeManager.livePalette`; night-mode `ModeToggle` (system / light / dark) → `settings.selectNightMode(...)` → `AppCompatDelegate` rewrites the activity resources in place; language `LanguageToggle` (system / English / မြန်မာ) → `selectLanguage(..., activity)` → `LanguageManager.apply` + `onConfigurationChanged` |
+| `AppearanceCard` | four `SwatchEntry` circles (colour drawn in code, 3 dp selected stroke) → `SelectPalette` action → `ThemeManager.livePalette`; night-mode `ModeToggle` (system / light / dark) → `SelectNightMode` → `AppCompatDelegate` rewrites the activity resources in place; language `LanguageToggle` (system / English / မြန်မာ) → `SelectLanguage(language, activity)` → `LanguageManager.apply` + `onConfigurationChanged` |
 | `MessageAlertsCard` | sound switch, volume slider, sound-type radio group — hidden if `!VipMessageAlerts.supported`, alpha 0.45 when disabled |
 | `VolumeCard` | ringtone volume slider + value pill (25–100) + shared `CallAlertSettingsContent` (first/second call, repeat window 3/5/10, escalation switch, preview) |
 | `SoundTypeCard` | override sound: ringtone vs notification |
@@ -119,30 +153,34 @@ composable receives it as `home: HomeViewModel`:
 
 Export/import is split over two places:
 
+* **`SettingsScreen`** owns the `ActivityResultContracts.CreateDocument("application/json")`
+  and `OpenDocument` launchers plus the password prompt with confirmation: a valid prompt
+  dispatches `ConfirmExportPassword(password)` (the model stores it) and launches the
+  document picker with its own `corealert-backup-<timestamp>.json` name, then feeds the
+  picked URI back as `ExportUri(uri)` / `ImportUri(uri)`.
 * **`SettingsViewModel`** (`feature/settings/SettingsViewModel.kt`) holds the dialog state and the
-  file work: `beginExport(password)` returns the `corealert-backup-<timestamp>.json`
-  filename, `onExportUri(uri)` writes the encrypted envelope through `ContentResolver`,
-  `onImportUri(uri)` reads/validates it, and `decryptPendingImport(password)` runs the
+  file work: `ExportUri` writes the encrypted envelope through `ContentResolver`,
+  `ImportUri` reads/validates it, and `DecryptPendingImport` runs the
   PBKDF2 decrypt **off the UI thread**, posting the result back to the main looper.
   `applyImportedConfig()` restores everything and restarts the service if it was enabled.
-  Palette changes go through `selectPalette(...)`, which stores the pref and updates
+  Palette changes go through `SelectPalette`, which stores the pref and updates
   `ThemeManager.livePalette`; night mode and language are applied just as live — the app
   never calls `activity.recreate()`.
-* **`SettingsScreen`** owns the `ActivityResultContracts.CreateDocument("application/json")`
-  and `OpenDocument` launchers plus the password prompt with confirmation, and feeds the
-  picked URIs back into the model.
 
 Dialog state is a `sealed interface SettingsDialog`: `ExportPassword`, `ImportConfirm`,
-`ImportPassword`, `AddQuietRule`, `DeleteQuietRule(index, rule)` — held by the view model,
-so it survives rotation.
+`ImportPassword`, `AddQuietRule`, `DeleteQuietRule(index, rule)` — held in
+`SettingsUiState.dialog`, so it survives rotation.
 
 ### 1.3 Other screens
 
-* **`PrivacyScreen`** (`feature/privacy/PrivacyScreen.kt`, 139 LOC): fully static — three `AppCard`s, and `linkedBody()` renders each body as an `AnnotatedString` whose URLs, e-mail addresses and phone
-  numbers carry a `LinkAnnotation.Url` (accent colour + underline) opened through `LocalUriHandler` —
-  each with an `IconBadge` (`ic_shield` / `ic_info` / `ic_user`), a `CardHeader` title, a
-  `SoftPill` chip (`privacy_chip_no_tracking` / `privacy_chip_encrypted` /
-  `privacy_chip_no_ads`) and its body text.
+* **`PrivacyScreen`** (`feature/privacy/PrivacyScreen.kt`, 46 LOC): fully static — a `Column`
+  of three `PrivacyCard`s from `feature/privacy/component/PrivacyCard.kt` (103 LOC). Each card
+  has a `CardHeader` (`ic_shield` / `ic_lock` / `ic_user`), an `OkChip`
+  (`privacy_chip_no_tracking` / `privacy_chip_encrypted` / `privacy_chip_no_ads`) and its body;
+  `linkedBody()` renders the body as an `AnnotatedString` whose URLs, e-mail addresses and
+  phone numbers carry a `LinkAnnotation.Url` (accent colour + underline) opened through
+  `LocalUriHandler`. Nothing here is stateful, so the screen has no `UiState` / `Action` /
+  view model.
 
 ### 1.4 Dialogs
 
@@ -159,13 +197,19 @@ All dialogs are Material 3 `Dialog`s built from the shared primitives in
 | `TimeStepper` | ± hour/minute steppers (mute hours, quiet-rule from/to) — replaces the old `NumberPicker` / `MaterialTimePicker` |
 | `OutlinedChoiceButton` | secondary buttons inside dialogs |
 
-Home dialog dispatch lives in `HomeDialogs(home)` (`feature/home/HomeScreen.kt`) over
-`sealed interface HomeDialog`: `AddChoice`, `ContactForm`, `ContactNumbers`,
+Home dialog dispatch lives in `HomeDialogs(state, onAction)` (`feature/home/component/HomeDialogs.kt`)
+over `sealed interface HomeDialog`: `AddChoice`, `ContactForm`, `ContactNumbers`,
 `RemoveContact`, `ContactCallMode`, `CallModeSettings`, `MuteHours`, `DndExplain`,
 `MessageAccess`, `MessagePair`. The dedicated ones (`ContactFormDialog`,
 `ContactNumbersDialog`, `MuteHoursDialog`, `CallModeSettingsDialog` +
-shared `CallAlertSettingsContent`) live in `feature/home/HomeDialogs.kt`; `SettingsScreen`
-imports `CallAlertSettingsContent` from that file (the two screens share it).
+shared `CallAlertSettingsContent`) live in `feature/home/component/HomeDialogs.kt`;
+`component/VolumeCard.kt` imports `CallAlertSettingsContent` from that file (the two
+screens share it) and drives it from its own state with `SettingsAction.SetCallAlertMode` /
+`SetRepeatWindow` / `SetEscalateVolume`.
+
+Confirm buttons whose action can fail (save contact, save numbers, add quiet rule) return
+`false` to `SosDialog`, so dismissal is decided by the view model: it clears `dialog` on
+success and leaves the dialog open on a validation toast.
 
 ---
 
