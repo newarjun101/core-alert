@@ -139,8 +139,9 @@ single-activity, version catalog), split the single `app` module into **seven Gr
 (`:app`, `:feature`, `:core:domain`, `:core:policy`, `:core:data`, `:core:monitoring`,
 `:core:ui`), and added new features on top of the original — among them **Viber** message
 alerts, the **in-app language switcher (English / Burmese)**, appearance settings (color
-palette and light/dark) that switch live without recreating the app, and the per-feature
-documentation in [`docs/`](docs/README.md).
+palette and light/dark) that switch live without recreating the app, chip layouts that stay
+correct in both scripts (flow-wrapped quiet-hour days, fixed-height status chips — Burmese
+labels never clip), and the per-feature documentation in [`docs/`](docs/README.md).
 
 - Developer: [github.com/newarjun101](https://github.com/newarjun101)
 - Repository: [github.com/newarjun101/core-alert](https://github.com/newarjun101/core-alert)

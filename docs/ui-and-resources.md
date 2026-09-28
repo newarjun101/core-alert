@@ -78,7 +78,7 @@ A `LazyColumn` with stable item keys:
 | Key | Composable | Contents |
 |---|---|---|
 | `warning` | `WarningBanner` | shown only when `HomeWarningPolicy` decides there is something to fix: icon, message, action button (battery-optimisation / app-details intent fired from `LocalContext`) |
-| `hero` | `HeroCard` + `HeroBell` + `HeroChip` + `DrawScope.drawPulseRing` | full-bleed state card: gradient, animated pulse ring (only while monitoring), bell icon (on/off), state label (28 sp ExtraBold), hint text, service switch, bypass chip |
+| `hero` | `HeroCard` + `HeroBell` + `HeroChip` + `DrawScope.drawPulseRing` | full-bleed state card: gradient, animated pulse ring (only while monitoring), bell icon (on/off), state label (28 sp ExtraBold), hint text, service switch, bypass chip; the three `HeroChip`s use a fixed `32.dp` height so they stay aligned in both locales |
 | `callmode` | `CallModeSummaryButton` | "first / second call" summary → opens the `CallModeSettings` dialog |
 | `mute` | `MuteCard` | pause button + live mute countdown |
 | `permissions` | `PermissionsCard` + `PermissionRow` | runtime-permission and DND rows, each with status icon and action button |
@@ -148,7 +148,7 @@ taking `(state, onAction)` — `internal fun`, file-private helpers stay `privat
 | `MessageAlertsCard` | sound switch, volume slider, sound-type radio group — hidden if `!VipMessageAlerts.supported`, alpha 0.45 when disabled |
 | `VolumeCard` | ringtone volume slider + value pill (25–100) + shared `CallAlertSettingsContent` (first/second call, repeat window 3/5/10, escalation switch, preview) |
 | `SoundTypeCard` | override sound: ringtone vs notification |
-| `QuietHoursCard` | rule rows (`QuietRuleRow`) + add button → `AddQuietRuleDialog` (7 weekday `DayChip`s, `TimeStepper` from/to, cross-midnight hint) |
+| `QuietHoursCard` | rule rows (`QuietRuleRow`) + add button → `AddQuietRuleDialog` (7 weekday `DayChip`s in a wrapping `FlowRow` — natural width, one line, so long Burmese day names never clip — plus `TimeStepper` from/to and the cross-midnight hint) |
 | `BackupCard` | export / import buttons with progress + result feedback |
 
 Export/import is split over two places:
@@ -398,6 +398,13 @@ from the already-updated `Application` resources). `LanguageManager.reapply(...)
 same hook re-imposes the stored locale whenever the framework hands back the system one.
 `android:localeConfig` keeps the API 33+ system per-app language picker available
 for the *System* option.
+
+Because Myanmar script needs far taller and wider line boxes than Latin at the same
+`sp`, components that hold translated text keep a **script-independent geometry** instead
+of measuring their content: the Home `HeroChip`s (Silent / Vibrate / DND) have a fixed
+`32.dp` height and centre their label, and the quiet-hours `DayChip`s sit in a `FlowRow`
+with `maxLines = 1`, so `ကြာသပတေး` / `တနင်္ဂနွေ` wrap onto extra rows at full width while
+English still fits `Mon–Thu` / `Fri–Sun` on two rows.
 
 ---
 
