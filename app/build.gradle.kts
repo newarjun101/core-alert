@@ -46,12 +46,27 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("../corealert-release.jks")
-            storePassword = localProps.getProperty("STORE_PASSWORD", "")
-            keyAlias = "corealert"
-            keyPassword = localProps.getProperty("KEY_PASSWORD", "")
+            storeFile =
+                file(System.getenv("KEYSTORE_FILE") ?: localProps.getProperty("KEYSTORE_FILE"))
+
+            storePassword =
+                System.getenv("STORE_PASSWORD") ?: localProps.getProperty("STORE_PASSWORD")
+
+            keyAlias =
+                System.getenv("KEY_ALIAS") ?: localProps.getProperty("KEY_ALIAS", "corealert")
+
+            keyPassword = System.getenv("KEY_PASSWORD") ?: localProps.getProperty("KEY_PASSWORD")
         }
     }
+
+    /* signingConfigs {
+         create("release") {
+             storeFile = file("../corealert-release.jks")
+             storePassword = localProps.getProperty("STORE_PASSWORD", "")
+             keyAlias = "corealert"
+             keyPassword = localProps.getProperty("KEY_PASSWORD", "")
+         }
+     }*/
 
     buildTypes {
         debug {

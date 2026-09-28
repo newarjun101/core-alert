@@ -1,4 +1,6 @@
 *.iml
+.DS_Store
+**/.DS_Store
 .gradle
 /local.properties
 /.idea
@@ -13,6 +15,9 @@ local.properties
 .kotlin/
 /app/src/debug/
 /app/release/
+signSecret/
+app/production/
 
 # Superpowers SDD scratch (ledger, reports, review packages)
 .superpowers/
+
