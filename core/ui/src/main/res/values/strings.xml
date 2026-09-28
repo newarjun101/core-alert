@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">CoreAlert</string>
+    <string name="appearance_title">Appearance</string>
+    <string name="appearance_palette">Color theme</string>
+    <string name="appearance_mode">Light / dark</string>
+    <string name="palette_indaco">Indigo</string>
+    <string name="palette_teal">Teal</string>
+    <string name="palette_argilla">Clay</string>
+    <string name="palette_ardesia">Slate</string>
+    <string name="mode_system">System</string>
+    <string name="mode_light">Light</string>
+    <string name="mode_dark">Dark</string>
+    <string name="language_label">Language</string>
+    <string name="language_system">System</string>
+    <string name="language_english">English</string>
+    <string name="language_myanmar">မြန်မာ</string>
+    <string name="subtitle">Force ringtone for important calls</string>
+    <string name="home_monitoring_label">MONITORING</string>
+    <string name="home_service_state_on">Active</string>
+    <string name="home_service_state_off">Paused</string>
+    <string name="home_service_hint_off">Turn on monitoring to make VIPs ring even in silent mode.</string>
+    <string name="hero_silent">Silent</string>
+    <string name="hero_vibrate">Vibrate</string>
+    <string name="hero_dnd">DND</string>
+    <string name="privacy_chip_no_tracking">No tracking</string>
+    <string name="privacy_chip_encrypted">Encrypted</string>
+    <string name="privacy_chip_no_ads">No advertising</string>
+    <string name="permissions_title">Required permissions</string>
+    <string name="runtime_perm_label">Phone, call log and contacts</string>
+    <string name="dnd_perm_label">Do Not Disturb (DND)</string>
+    <string name="authorize">Authorize</string>
+    <string name="configure">Configure</string>
+    <string name="volume_label">Ringtone volume</string>
+    <string name="contacts_title">VIP Contacts</string>
+    <string name="add_contact">Add contact</string>
+    <string name="contacts_empty_title">No VIP contacts yet</string>
+    <string name="contacts_empty_body">Add the people who must reach you even when the phone is in Silent, Vibrate or Do Not Disturb mode.</string>
+    <string name="contacts_empty_hint">Tap + to add your first contact.</string>
+    <string name="status_granted">Granted</string>
+    <string name="status_missing">Missing</string>
+    <string name="perm_all_granted">Permissions granted!</string>
+    <string name="perm_some_missing">Some permissions are missing — the service may not work correctly</string>
+    <string name="grant_perms_first">Grant all permissions first</string>
+    <string name="monitoring_on">Monitoring activated</string>
+    <string name="monitoring_off">Monitoring deactivated</string>
+    <string name="add_choice_title">Add VIP contact</string>
+    <string name="choice_from_contacts">Pick from contacts</string>
+    <string name="choice_manual">Enter manually</string>
+    <string name="confirm_contact_title">Confirm VIP contact</string>
+    <string name="btn_add">Add</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_remove">Remove</string>
+    <string name="btn_continue">Continue</string>
+    <string name="edit_contact_title">Edit contact</string>
+    <string name="remove_contact_title">Remove contact</string>
+    <string name="remove_contact_msg">Remove %1$s (%2$s) from VIP list?</string>
+    <string name="no_phone_found">No phone number found for this contact</string>
+    <string name="contact_invalid_input">Enter a name and a phone number with at least 4 digits.</string>
+    <string name="contact_numbers_title">Select numbers for %1$s</string>
+    <string name="contact_number_option">%1$s — %2$s</string>
+    <string name="contact_numbers_none_selected">Select at least one number.</string>
+    <string name="contact_numbers_already_added">The selected numbers are already in the VIP list.</string>
+    <plurals name="contact_numbers_added">
+        <item quantity="one">%1$d number added</item>
+        <item quantity="other">%1$d numbers added</item>
+    </plurals>
+    <string name="dnd_dialog_title">Do Not Disturb permission</string>
+    <string name="dnd_dialog_msg">To disable \"Do Not Disturb\" when a VIP call arrives, you need to authorize CoreAlert in system settings.\n\nPress OK to open settings, then find \"CoreAlert\" and enable the toggle.</string>
+    <string name="btn_open_settings">Open settings</string>
+    <string name="notif_service_title">CoreAlert active</string>
+    <string name="notif_service_text">Monitoring %1$d VIP contacts</string>
+    <string name="notif_override_title">Ringtone forced!</string>
+    <string name="notif_override_text">VIP call incoming — ringtone activated</string>
+    <!-- Quiet Hours -->
+    <string name="quiet_hours_title">Quiet Hours</string>
+    <string name="quiet_hours_subtitle">CoreAlert pauses during these times</string>
+    <string name="quiet_add_rule">Add quiet rule</string>
+    <string name="quiet_new_rule_title">New quiet rule</string>
+    <string name="quiet_from">From</string>
+    <string name="quiet_to">To</string>
+    <string name="quiet_days_label">Days</string>
+    <string name="quiet_next_day">(+1)</string>
+    <string name="quiet_delete_title">Remove quiet rule</string>
+    <string name="quiet_delete_msg">Remove this quiet rule?\n%1$s  %2$s - %3$s</string>
+    <string name="quiet_max_rules">Maximum rules reached</string>
+    <string name="quiet_invalid_rule">Select at least one day and different start/end times</string>
+    <string name="quiet_every_day">Every day</string>
+    <string name="day_mon">Mon</string>
+    <string name="day_tue">Tue</string>
+    <string name="day_wed">Wed</string>
+    <string name="day_thu">Thu</string>
+    <string name="day_fri">Fri</string>
+    <string name="day_sat">Sat</string>
+    <string name="day_sun">Sun</string>
+    <!-- Location Sharing -->
+    <!-- Location Log -->
+    <!-- Icon descriptions -->
+    <!-- Mute Timer -->
+    <string name="mute_button">Pause monitoring</string>
+    <string name="mute_button_cancel">Resume monitoring</string>
+    <string name="mute_subtitle">Temporary pause 1–12 h</string>
+    <string name="mute_dialog_title">Pause VIP alerts</string>
+    <string name="mute_dialog_message">VIP ringtone and message sounds will be disabled for the selected duration.</string>
+    <string name="mute_countdown">VIP alerts paused — resume in %1$dh %2$dm</string>
+    <string name="mute_activated">VIP alerts paused for %1$d hours</string>
+    <string name="mute_cancelled">VIP alerts resumed</string>
+    <!-- Settings -->
+    <string name="settings_sound_title">Override sound</string>
+    <string name="settings_sound_ringtone">Phone ringtone</string>
+    <string name="settings_sound_notification">Notification sound</string>
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_privacy">Privacy &amp; licenses</string>
+
+    <!-- Security -->
+
+    <!-- Backup -->
+    <string name="backup_title">Backup &amp; restore</string>
+    <string name="backup_export">Export configuration</string>
+    <string name="backup_import">Import configuration</string>
+    <string name="backup_export_confirm_title">Secret backup</string>
+    <string name="backup_export_confirm">The backup is encrypted with your password and contains your contacts, quiet hours, sound and alert settings. Keep the password safe: without it the backup cannot be restored.</string>
+    <string name="backup_export_success">Backup exported successfully</string>
+    <string name="backup_export_failed">Export failed: %1$s</string>
+    <string name="backup_import_success">Configuration imported successfully</string>
+    <string name="backup_import_failed">Import failed: invalid file</string>
+    <string name="backup_import_confirm">Importing will overwrite your current configuration. Continue?</string>
+    <string name="backup_import_confirm_title">Confirm import</string>
+    <string name="dnd_revoked_warning">Emergency override degraded: re-grant Do Not Disturb access in Settings.</string>
+    <!-- Privacy -->
+    <string name="privacy_data_title">Data handling</string>
+    <string name="privacy_data_body">CoreAlert processes call and contact data on your device. If you enable VIP message alerts, notification metadata is processed locally to identify paired direct conversations; message text, contact names and phone numbers from notifications are never stored. Only hashed conversation identifiers and technical deduplication fingerprints are saved.\n\nCall monitoring runs entirely on your phone: it never uploads your contacts, call history or location, and nothing is sent to a server.\n\nA backup you export is a local file encrypted with a password you choose; CoreAlert never sees that password.\n\nCoreAlert does not protect against a compromised phone, malware, screenshots, or keyloggers.\n\nNo analytics, no tracking, no ads.\n\n100% offline — no Firebase, no analytics SDKs, no advertising, no third-party scripts and no push notifications. Nothing you enter ever leaves your phone: the production build opens no network connection at all.</string>
+    <string name="privacy_license_title">License</string>
+    <string name="privacy_license_body">CoreAlert is free software licensed under GPL-3.0-or-later.\n\nIt is based on SOS Ring by JackRushante (Lorenzo Marci) — thank you for the original app. The Compose migration, the CoreAlert rebrand and the new features were added by Arjun (github.com/newarjun101).</string>
+    <string name="privacy_contact_title">Contact</string>
+    <string name="privacy_contact_body">Developer: Arjun — github.com/newarjun101 · newarjun101@gmail.com · +95 9 978770588\n\nContact me for any help, or if you need any other app — I am always here to assist.\n\nOriginal project: SOS Ring by JackRushante (Lorenzo Marci) — github.com/JackRushante/SOSRing</string>
+    <string name="menu_edit">Edit</string>
+    <string name="menu_delete">Delete</string>
+    <string name="more_icon_desc">More</string>
+    <string name="perm_revoked_notif_title">CoreAlert needs attention</string>
+    <string name="perm_revoked_notif_text">Permissions revoked: VIP ringing is not working. Open CoreAlert and grant them again.</string>
+    <string name="home_warn_perms_revoked">Permissions revoked: VIP ringing is not working.</string>
+    <string name="home_warn_auto_revoke">Android may remove permissions if you never open the app.</string>
+    <string name="home_warn_battery_unrestricted">Battery optimization may kill call monitoring. Set CoreAlert to Unrestricted battery use.</string>
+    <string name="home_warn_action_fix">Fix</string>
+    <string name="notif_service_channel_name">Call monitoring</string>
+    <string name="notif_service_channel_desc">Persistent notification for the CoreAlert service</string>
+    <string name="notif_override_channel_name">Override active</string>
+    <string name="notif_override_channel_desc">Notification when the ringtone is forced</string>
+    <string name="dialog_name_hint">Name</string>
+    <string name="dialog_phone_hint">Phone number</string>
+    <string name="backup_password_hint">Password</string>
+    <string name="backup_password_confirm_hint">Confirm password</string>
+    <string name="backup_password_empty">Enter a password</string>
+    <string name="backup_password_mismatch">Passwords do not match</string>
+    <string name="backup_import_password_title">Encrypted backup</string>
+    <string name="backup_import_password_message">Enter the backup password.</string>
+    <string name="backup_import_wrong_password">Wrong password or corrupted file</string>
+    <string name="backup_import_legacy_rejected">This backup is not encrypted and is no longer supported. Create a new backup.</string>
+    <!-- WhatsApp VIP alerts -->
+
+    <!-- VIP message alerts -->
+    <string name="message_listener_label">CoreAlert — VIP message alerts</string>
+    <string name="message_alerts_menu">VIP message alerts</string>
+    <string name="message_app_whatsapp">WhatsApp</string>
+    <string name="message_app_google_messages">SMS / RCS</string>
+    <string name="message_app_telegram">Telegram</string>
+    <string name="message_app_viber">Viber</string>
+    <string name="message_pair_app">Pair %1$s</string>
+    <string name="message_pair_cancel_app">Cancel %1$s pairing</string>
+    <string name="message_unpair_app">Disable %1$s alert</string>
+    <string name="message_access_title">Notification access</string>
+    <string name="message_access_message">Allow CoreAlert to access notifications so it can identify direct conversations from VIP contacts. Message text is never stored.</string>
+    <string name="message_pair_title">Pair %1$s conversation</string>
+    <string name="message_pair_message">With %1$s closed, ask %2$s to send a direct message. The next direct conversation in that app will be paired with this VIP.</string>
+    <string name="message_pair_google_message">Ask %1$s to send a direct SMS or RCS message. CoreAlert pairs it automatically when Google Messages exposes the phone number; otherwise the next direct conversation is paired explicitly.</string>
+    <string name="message_pair_success">%1$s alerts enabled for %2$s</string>
+    <string name="message_auto_paired">SMS/RCS alerts automatically enabled for %1$s</string>
+    <string name="message_unpaired">%1$s alerts disabled for %2$s</string>
+    <string name="message_pair_cancelled">%1$s pairing cancelled</string>
+    <string name="message_settings_title">VIP message alerts</string>
+    <string name="message_settings_desc">Separate volume and sound for WhatsApp, SMS/RCS, Telegram and Viber</string>
+    <string name="message_sound_enabled">Play a sound for VIP messages</string>
+    <string name="message_sound_default">Default Android notification sound</string>
+    <string name="message_sound_contact">Sound assigned to the VIP contact (default notification if unavailable)</string>
+    <string name="call_mode_title">When to sound for VIP calls</string>
+    <string name="call_mode_first">From the first call</string>
+    <string name="call_mode_second">From the second call within %1$d minutes</string>
+    <string name="call_mode_inherit">Use the general setting</string>
+    <string name="call_mode_contact">Call rule for %1$s</string>
+    <string name="call_mode_summary_first">VIP calls: from the first call</string>
+    <string name="call_mode_summary_second">VIP calls: second within %1$d min</string>
+    <string name="call_window_title">Repeat call window</string>
+    <string name="call_window_value">Window: %1$d minutes</string>
+    <string name="call_escalate_title">Double the volume on subsequent calls</string>
+    <string name="call_escalate_high_volume">Applies only when the configured call volume is below 50%. Lower the call volume to enable the progression.</string>
+    <string name="call_escalate_preview">When enabled: %1$d%% → %2$d%% → 100%%, starting from the first call allowed to sound. The original alarm volume is restored afterwards.</string>
+    <string name="call_mode_help">Only separate calls from the same VIP number count — cellular or messenger. The window starts with the first call; answering resets it. The first call keeps the normal phone sound settings. Pauses and Quiet Hours block all overrides and reset the count. Messages keep their separate sound setting. Each VIP can override the general call rule from its menu.</string>
+</resources>

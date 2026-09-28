@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  CoreAlert — Stile 2A "Indaco"  ·  values/themes.xml (base + CHIARO)
+  Sostituisce app/src/main/res/values/themes.xml
+  Base Material3 DayNight: i valori di notte arrivano da values-night/ (colors + questo file duplicato).
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.CoreAlert.Base" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorOnPrimary">@color/on_primary</item>
+
+        <!-- Superfici -->
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorSurfaceVariant">@color/surface_alt</item>
+        <item name="colorOnSurface">@color/ink</item>
+        <item name="colorOnSurfaceVariant">@color/ink_secondary</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorError">@color/status_missing</item>
+
+        <!-- Forma: raggi generosi (look "Custode") -->
+        <item name="shapeAppearanceCornerSmall">@style/Shape.CoreAlert.Small</item>
+        <item name="shapeAppearanceCornerMedium">@style/Shape.CoreAlert.Medium</item>
+        <item name="shapeAppearanceCornerLarge">@style/Shape.CoreAlert.Large</item>
+
+        <!-- Tipografia -->
+        <item name="fontFamily">@font/manrope</item>
+        <item name="android:fontFamily">@font/manrope</item>
+
+        <!-- System bars -->
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+        <item name="android:enforceStatusBarContrast" tools:targetApi="29">false</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="29">false</item>
+    </style>
+
+    <style name="Theme.CoreAlert.Indaco" parent="Theme.CoreAlert.Base">
+        <item name="colorPrimary">@color/indaco_primary</item>
+        <item name="colorPrimaryContainer">@color/indaco_container</item>
+        <item name="colorOnPrimaryContainer">@color/indaco_on_container</item>
+        <item name="colorSecondary">@color/indaco_secondary</item>
+        <item name="colorSecondaryContainer">@color/indaco_secondary_bg</item>
+        <item name="colorTertiary">@color/indaco_accent</item>
+        <item name="tokenAccent">@color/indaco_accent</item>
+        <item name="tokenFaded">@color/indaco_faded</item>
+        <item name="tokenStatusOk">@color/indaco_status_ok</item>
+        <item name="tokenHeroBg">@color/indaco_hero_bg</item>
+        <item name="tokenHeroChipBg">@color/indaco_hero_chip_bg</item>
+    </style>
+
+    <style name="Theme.CoreAlert.Teal" parent="Theme.CoreAlert.Base">
+        <item name="colorPrimary">@color/teal_primary</item>
+        <item name="colorPrimaryContainer">@color/teal_container</item>
+        <item name="colorOnPrimaryContainer">@color/teal_on_container</item>
+        <item name="colorSecondary">@color/teal_secondary</item>
+        <item name="colorSecondaryContainer">@color/teal_secondary_bg</item>
+        <item name="colorTertiary">@color/teal_accent</item>
+        <item name="tokenAccent">@color/teal_accent</item>
+        <item name="tokenFaded">@color/teal_faded</item>
+        <item name="tokenStatusOk">@color/teal_status_ok</item>
+        <item name="tokenHeroBg">@color/teal_hero_bg</item>
+        <item name="tokenHeroChipBg">@color/teal_hero_chip_bg</item>
+    </style>
+
+    <style name="Theme.CoreAlert.Argilla" parent="Theme.CoreAlert.Base">
+        <item name="colorPrimary">@color/argilla_primary</item>
+        <item name="colorPrimaryContainer">@color/argilla_container</item>
+        <item name="colorOnPrimaryContainer">@color/argilla_on_container</item>
+        <item name="colorSecondary">@color/argilla_secondary</item>
+        <item name="colorSecondaryContainer">@color/argilla_secondary_bg</item>
+        <item name="colorTertiary">@color/argilla_accent</item>
+        <item name="tokenAccent">@color/argilla_accent</item>
+        <item name="tokenFaded">@color/argilla_faded</item>
+        <item name="tokenStatusOk">@color/argilla_status_ok</item>
+        <item name="tokenHeroBg">@color/argilla_hero_bg</item>
+        <item name="tokenHeroChipBg">@color/argilla_hero_chip_bg</item>
+    </style>
+
+    <style name="Theme.CoreAlert.Ardesia" parent="Theme.CoreAlert.Base">
+        <item name="colorPrimary">@color/ardesia_primary</item>
+        <item name="colorPrimaryContainer">@color/ardesia_container</item>
+        <item name="colorOnPrimaryContainer">@color/ardesia_on_container</item>
+        <item name="colorSecondary">@color/ardesia_secondary</item>
+        <item name="colorSecondaryContainer">@color/ardesia_secondary_bg</item>
+        <item name="colorTertiary">@color/ardesia_accent</item>
+        <item name="tokenAccent">@color/ardesia_accent</item>
+        <item name="tokenFaded">@color/ardesia_faded</item>
+        <item name="tokenStatusOk">@color/ardesia_status_ok</item>
+        <item name="tokenHeroBg">@color/ardesia_hero_bg</item>
+        <item name="tokenHeroChipBg">@color/ardesia_hero_chip_bg</item>
+    </style>
+
+    <!-- Forme -->
+    <style name="Shape.CoreAlert.Small" parent="ShapeAppearance.Material3.Corner.Small">
+        <item name="cornerSize">14dp</item>
+    </style>
+    <style name="Shape.CoreAlert.Medium" parent="ShapeAppearance.Material3.Corner.Medium">
+        <item name="cornerSize">20dp</item>
+    </style>
+    <style name="Shape.CoreAlert.Large" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerSize">26dp</item>
+    </style>
+
+</resources>
